@@ -4,7 +4,7 @@ Easy conversion of structures
 # Example
 
 ```rust
-#[derive(Clone, JustConvert, Default)]
+#[derive(JustConvert, Default)]
 #[convert(from_into(other::Mouse))]
 #[convert(from_into(Cat, default))]
 struct Dog {
@@ -20,7 +20,7 @@ struct Dog {
     error: Option<DogError>,
 }
 
-#[derive(Clone, JustConvert, Default)]
+#[derive(JustConvert, Default)]
 struct Cat {
     name: Option<String>,
     age: u64,
@@ -34,3 +34,7 @@ mod other {
     }
 }
 ```
+
+# Inspiration
+
+Thanks to the [struct-convert](https://crates.io/crates/struct-convert) and [derive-from-ext](https://crates.io/crates/derive-from-ext) libraries

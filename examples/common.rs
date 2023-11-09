@@ -2,7 +2,7 @@
 
 use just_convert_rs::JustConvert;
 
-#[derive(Clone, JustConvert, Default)]
+#[derive(JustConvert, Default)]
 #[convert(from_into(other::Mouse))]
 #[convert(from_into(Cat, default))]
 struct Dog {
@@ -19,7 +19,7 @@ struct Dog {
     error: Option<DogError>,
 }
 
-#[derive(Clone, JustConvert, Default)]
+#[derive(JustConvert, Default)]
 struct Cat {
     name: Option<String>,
     age: u64,
