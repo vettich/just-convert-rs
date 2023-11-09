@@ -1,7 +1,13 @@
 [package]
-name = "just-convert-rs"
+name = "just-convert"
+description = "Easy conversion of structures"
 version = "0.1.0"
 edition = "2021"
+authors = ["Vetti <vetti.ch@mail.ru>"]
+license = "MIT"
+keywords = ["struct", "convert", "macro"]
+repository = "https://github.com/vettich/just-convert-rs.git"
+readme = "README.md"
 
 [lib]
 proc-macro = true
