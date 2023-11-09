@@ -1,4 +1,4 @@
-# just-convert-rs
+# just-convert
 Easy conversion of structures 
 
 # Example
