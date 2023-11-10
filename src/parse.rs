@@ -1,9 +1,9 @@
 use syn::{
-    meta::ParseNestedMeta, parenthesized, token, Data, DeriveInput, FieldsNamed, Path, Result,
-    Token,
+    meta::ParseNestedMeta, parenthesized, token, Data, DeriveInput, FieldsNamed, Path, PathSegment,
+    Result, Token,
 };
 
-use crate::{FieldParams, FieldValue, Fields, Params, PathParams};
+use crate::{AdditionalType, FieldParams, FieldValue, Fields, Params, PathParams};
 
 pub(crate) fn parse_params(input: &DeriveInput) -> Result<Params> {
     let (from, into) = parse_attributes(input)?;
@@ -103,6 +103,7 @@ fn parse_named_struct_fields(d: &FieldsNamed) -> Result<Fields> {
         };
 
         let mut field_params = FieldParams::new();
+        field_params.a_type = detect_type_for_serviced(&field.ty, 0);
 
         for attr in &field.attrs {
             if !attr.path().is_ident("convert") {
@@ -142,33 +143,37 @@ fn parse_named_struct_fields(d: &FieldsNamed) -> Result<Fields> {
 
 /// Try parse value as `rename = "value"`,
 /// `rename(into = "value")` or `rename(into(Path, "value"))`
-fn parse_field_value<T: syn::parse::Parse>(
+fn parse_field_value<T>(
     name: &'static str,
     meta: &ParseNestedMeta<'_>,
     field_value: &mut FieldValue<T>,
-) -> Result<bool> {
+) -> Result<bool>
+where
+    T: syn::parse::Parse + Clone,
+{
     if !meta.path.is_ident(name) {
         return Ok(false);
     }
 
     if meta.input.peek(token::Paren) {
         meta.parse_nested_meta(|meta| {
-            let mut found = false;
-
             if let Some((path, v)) = parse_field_value_for("from", &meta)? {
-                found = true;
                 field_value.set_from(path, v);
+                return Ok(());
             }
 
             if let Some((path, v)) = parse_field_value_for("into", &meta)? {
-                found = true;
                 field_value.set_into(path, v);
+                return Ok(());
             }
 
-            if !found {
-                return Err(meta.error("unknown field"));
+            if let Some((path, v)) = parse_field_value_for::<T>("from_into", &meta)? {
+                field_value.set_from(path.clone(), v.clone());
+                field_value.set_into(path, v);
+                return Ok(());
             }
-            Ok(())
+
+            Err(meta.error("unknown field"))
         })?;
     } else {
         let value: T = meta.value()?.parse()?;
@@ -183,10 +188,7 @@ fn parse_field_value_for<T: syn::parse::Parse>(
     name: &'static str,
     meta: &ParseNestedMeta<'_>,
 ) -> Result<Option<(Option<Path>, T)>> {
-    if !meta.path.is_ident(name)
-        && !meta.path.is_ident("from_into")
-        && !meta.path.is_ident("into_from")
-    {
+    if !meta.path.is_ident(name) {
         return Ok(None);
     }
 
@@ -259,4 +261,43 @@ fn parse_field_value_for_bool(
     }
 
     Ok(Some(None))
+}
+
+fn detect_type_for_serviced(ty: &syn::Type, recurse: u64) -> AdditionalType {
+    let syn::Type::Path(syn::TypePath {
+        path: Path { segments, .. },
+        ..
+    }) = &ty
+    else {
+        return AdditionalType::None;
+    };
+
+    match segments.iter().next() {
+        Some(seg) if seg.ident == "Option" => match is_support_type_for_serviced(seg, recurse) {
+            (true, AdditionalType::None) => return AdditionalType::Option,
+            (true, AdditionalType::Vec) => return AdditionalType::OptionVec,
+            _ => (),
+        },
+        Some(seg) if seg.ident == "Vec" => match is_support_type_for_serviced(seg, recurse) {
+            (true, AdditionalType::None) => return AdditionalType::Vec,
+            (true, AdditionalType::Option) => return AdditionalType::VecOption,
+            _ => (),
+        },
+        _ => (),
+    }
+
+    AdditionalType::None
+}
+
+fn is_support_type_for_serviced(seg: &PathSegment, recurse: u64) -> (bool, AdditionalType) {
+    if let syn::PathArguments::AngleBracketed(a) = &seg.arguments {
+        let a_next = a.args.iter().next();
+        if let Some(syn::GenericArgument::Type(ty)) = a_next {
+            if recurse < 1 {
+                return (true, detect_type_for_serviced(ty, 1));
+            }
+            return (true, AdditionalType::None);
+        }
+    };
+    (false, AdditionalType::None)
 }

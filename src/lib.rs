@@ -1,3 +1,38 @@
+//! just-convert make easier to convert between structs.
+//!
+//! This crate provides JustConvert derive macro.
+//!
+//! Example of use:
+//!
+//! ```rust
+//! # use just_convert::JustConvert;
+//! #
+//! // Allow convert A struct into B struct
+//! #[derive(JustConvert)]
+//! #[convert(into(B))]
+//! struct A {
+//!     // field can be renamed
+//!     #[convert(rename = bid)]
+//!     id: i64,
+//!
+//!     // field can execute any expression
+//!     #[convert(map = ".to_string()")]
+//!     num: i64,
+//!
+//!     // unwrap Option value for B::name
+//!     #[convert(unwrap)]
+//!     name: Option<String>,
+//! }
+//!
+//! struct B {
+//!     bid: i64,
+//!     num: String,
+//!     name: String,
+//! }
+//! ```
+//!
+//! See more [examples](https://github.com/vettich/just-convert-rs/tree/main/examples)
+
 use std::collections::HashMap;
 
 use parse::parse_params;
@@ -46,6 +81,7 @@ struct FieldParams {
     wrap: FieldValue<bool>,
     unwrap: FieldValue<bool>,
     skip: FieldValue<bool>,
+    a_type: AdditionalType,
 }
 
 impl FieldParams {
@@ -56,6 +92,7 @@ impl FieldParams {
             wrap: FieldValue::new(),
             unwrap: FieldValue::new(),
             skip: FieldValue::new(),
+            a_type: AdditionalType::None,
         }
     }
 }
@@ -94,6 +131,38 @@ impl<T> FieldValue<T> {
         } else {
             self.common_into = Some(value);
         }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+enum AdditionalType {
+    #[default]
+    None,
+    /// Option<T>
+    Option,
+    /// Option<Vec<T>>
+    OptionVec,
+    /// Vec<T>
+    Vec,
+    /// Vec<Option<T>>
+    VecOption,
+}
+
+impl AdditionalType {
+    fn is_option(self) -> bool {
+        matches!(self, Self::Option)
+    }
+
+    fn is_option_vec(self) -> bool {
+        matches!(self, Self::OptionVec)
+    }
+
+    fn is_vec(self) -> bool {
+        matches!(self, Self::Vec)
+    }
+
+    fn is_vec_option(self) -> bool {
+        matches!(self, Self::VecOption)
     }
 }
 

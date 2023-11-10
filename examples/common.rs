@@ -1,7 +1,10 @@
 #![allow(dead_code)]
 
-use just_convert_rs::JustConvert;
+use just_convert::JustConvert;
 
+/// Convert between Dog and Cat, Dog and Mouse
+///
+/// Using map, skip, unwrap field helpers
 #[derive(JustConvert, Default)]
 #[convert(from_into(other::Mouse))]
 #[convert(from_into(Cat, default))]
@@ -12,19 +15,29 @@ struct Dog {
     #[convert(map(from(Cat, ". as i64"), into(Cat, ". as u64")))]
     age: i64,
 
-    // TODO
     // inner of Option must be autoconvert
     #[convert(skip(from_into(other::Mouse)))]
-    #[convert(map = ".map(Into::into)")]
     error: Option<DogError>,
+
+    // inners of Vec must be autoconvert
+    #[convert(skip(from_into(other::Mouse)))]
+    messages: Vec<DogError>,
+
+    // inners of Option of Vec must be autoconvert
+    #[convert(skip(from_into(other::Mouse)))]
+    items: Option<Vec<DogError>>,
 }
 
-#[derive(JustConvert, Default)]
+#[derive(JustConvert, Debug, Default, PartialEq)]
 struct Cat {
     name: Option<String>,
     age: u64,
     // inner of Option must be autoconvert
     error: Option<CatError>,
+    // inners of Vec must be autoconvert
+    messages: Vec<CatError>,
+    // inners of Option of Vec must be autoconvert
+    items: Option<Vec<CatError>>,
 }
 
 mod other {
@@ -33,9 +46,9 @@ mod other {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DogError;
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CatError;
 
 impl From<DogError> for CatError {
@@ -51,3 +64,25 @@ impl From<CatError> for DogError {
 }
 
 fn main() {}
+
+#[test]
+fn test_dog_into_cat() {
+    let a = Dog {
+        name: "John".into(),
+        age: 12,
+        error: Some(DogError),
+        messages: vec![DogError],
+        items: Some(vec![DogError]),
+    };
+    let b: Cat = a.into();
+    debug_assert_eq!(
+        Cat {
+            name: Some("John".into()),
+            age: 12,
+            error: Some(CatError),
+            messages: vec![CatError],
+            items: Some(vec![CatError]),
+        },
+        b
+    );
+}

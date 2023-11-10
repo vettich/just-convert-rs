@@ -138,6 +138,36 @@ fn build_from_assign_item(
         });
     }
 
+    if params.a_type.is_option() && params.wrap.get_from(target).unwrap_or_default() {
+        return Ok(quote! {
+            #left_field: Some(this.#right_field),
+        });
+    }
+
+    if params.a_type.is_option() {
+        return Ok(quote! {
+            #left_field: this.#right_field.map(Into::into),
+        });
+    }
+
+    if params.a_type.is_option_vec() {
+        return Ok(quote! {
+            #left_field: this.#right_field.map(|x| x.into_iter().map(Into::into).collect()),
+        });
+    }
+
+    if params.a_type.is_vec() {
+        return Ok(quote! {
+            #left_field: this.#right_field.into_iter().map(Into::into).collect(),
+        });
+    }
+
+    if params.a_type.is_vec_option() {
+        return Ok(quote! {
+            #left_field: this.#right_field.into_iter().map(|x| x.map(Into::into)).collect(),
+        });
+    }
+
     Ok(quote! {
         #left_field: this.#right_field.into(),
     })
@@ -169,6 +199,36 @@ fn build_into_assign_item(
         let map_expr = parse_map_expr(right_field, map)?;
         return Ok(quote! {
             #left_field: #map_expr,
+        });
+    }
+
+    if params.unwrap.get_into(target).unwrap_or_default() {
+        return Ok(quote! {
+            #left_field: this.#right_field.unwrap_or_default(),
+        });
+    }
+
+    if params.a_type.is_option() {
+        return Ok(quote! {
+            #left_field: this.#right_field.map(Into::into),
+        });
+    }
+
+    if params.a_type.is_option_vec() {
+        return Ok(quote! {
+            #left_field: this.#right_field.map(|x| x.into_iter().map(Into::into).collect()),
+        });
+    }
+
+    if params.a_type.is_vec() {
+        return Ok(quote! {
+            #left_field: this.#right_field.into_iter().map(Into::into).collect(),
+        });
+    }
+
+    if params.a_type.is_vec_option() {
+        return Ok(quote! {
+            #left_field: this.#right_field.into_iter().map(|x| x.map(Into::into)).collect(),
         });
     }
 
