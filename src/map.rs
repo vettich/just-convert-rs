@@ -31,19 +31,18 @@ fn parse_custom_fn_expr(field_name: Ident, input: ParseStream) -> syn::Result<To
     let mut begin_expr = true;
     let mut tokens = Vec::new();
     while !input.is_empty() {
-        if begin_expr
-            && input.peek(Token![.])
-            && (input.peek2(syn::Ident) || input.peek2(Token![as]))
-        {
-            input.parse::<Token![.]>()?;
-            tokens.push(TokenTree::Ident(Ident::new("this", field_name.span())));
-            tokens.push(TokenTree::Punct(Punct::new('.', Spacing::Alone)));
-            tokens.push(TokenTree::Ident(field_name.clone()));
-            if !input.peek(Token![as]) {
+        if begin_expr {
+            if let (true, is_alone) = is_dot(&input) {
+                input.parse::<Token![.]>()?;
+                tokens.push(TokenTree::Ident(Ident::new("this", field_name.span())));
                 tokens.push(TokenTree::Punct(Punct::new('.', Spacing::Alone)));
+                tokens.push(TokenTree::Ident(field_name.clone()));
+                if !is_alone {
+                    tokens.push(TokenTree::Punct(Punct::new('.', Spacing::Alone)));
+                }
+                begin_expr = false;
+                continue;
             }
-            begin_expr = false;
-            continue;
         }
 
         begin_expr = input.peek(Token![break])
@@ -96,4 +95,36 @@ fn parse_custom_fn_expr(field_name: Ident, input: ParseStream) -> syn::Result<To
         tokens.push(token);
     }
     Ok(TokenStream::from_iter(tokens))
+}
+
+/// Return (is_dot, is_alone)
+fn is_dot(input: &ParseStream) -> (bool, bool) {
+    if !input.peek(Token![.]) {
+        return (false, false);
+    }
+
+    // e.g. ". as i32"
+    if input.peek2(Token![as]) {
+        return (true, true);
+    }
+
+    // e.g. ".clone()"
+    if input.peek2(syn::Ident) {
+        return (true, false);
+    }
+
+    // e.g. ". {" or ". ("
+    if input.peek2(token::Brace) || input.peek2(token::Paren) {
+        return (true, true);
+    }
+
+    // e.g. single "."
+    // check is the next token empty
+    let input = input.fork();
+    let _ = input.parse::<Token![.]>();
+    if input.is_empty() {
+        (true, true)
+    } else {
+        (false, false)
+    }
 }
