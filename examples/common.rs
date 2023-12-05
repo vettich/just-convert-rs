@@ -11,7 +11,7 @@ use just_convert::JustConvert;
 struct Dog {
     #[convert(unwrap(from(Cat)))]
     name: String,
-    #[convert(skip(from(other::Mouse)))]
+    #[convert(skip(from_into(other::Mouse)))]
     #[convert(map(from(Cat, ". as i64"), into(Cat, ". as u64")))]
     age: i64,
 

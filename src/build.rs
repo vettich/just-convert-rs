@@ -186,7 +186,7 @@ fn build_into_assign_item(
     params: FieldParams,
     target: &Path,
 ) -> syn::Result<TokenStream> {
-    if params.skip.get_from(target).unwrap_or_default() {
+    if params.skip.get_into(target).unwrap_or_default() {
         return Ok(quote! {});
     }
 
