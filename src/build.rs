@@ -2,7 +2,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Path, Result};
 
-use crate::{map::parse_map_expr, FieldParams, FieldValue, Fields, Params};
+use crate::{map::parse_map_expr, FieldParams, FieldValue, Fields, Params, PathParams};
 
 impl<T: Clone> FieldValue<T> {
     fn get_from(&self, path: &Path) -> Option<T> {
@@ -39,10 +39,10 @@ impl Params {
         for from in &self.from {
             let current = self.name.clone();
             let from_path = &from.path;
-            let assigns = build_from_assigns(from_path, self.fields.clone())?;
+            let assigns = build_from_assigns(from, self.fields.clone())?;
 
             let default_expr = if from.default {
-                quote! {..#current::default()}
+                quote! { ..Default::default() }
             } else {
                 quote!()
             };
@@ -75,7 +75,7 @@ impl Params {
             let assigns = build_into_assigns(into_path, self.fields.clone())?;
 
             let default_expr = if into.default {
-                quote! {..#into_path::default()}
+                quote! { ..Default::default() }
             } else {
                 quote!()
             };
@@ -101,7 +101,7 @@ impl Params {
     }
 }
 
-fn build_from_assigns(target: &Path, fields: Fields) -> Result<Vec<TokenStream>> {
+fn build_from_assigns(target: &PathParams, fields: Fields) -> Result<Vec<TokenStream>> {
     let mut items = vec![];
     for (field, params) in fields {
         items.push(build_from_assign_item(field, params, target)?);
@@ -112,9 +112,15 @@ fn build_from_assigns(target: &Path, fields: Fields) -> Result<Vec<TokenStream>>
 fn build_from_assign_item(
     left_field: Ident,
     params: FieldParams,
-    target: &Path,
+    PathParams {
+        path: target,
+        default: target_default,
+    }: &PathParams,
 ) -> syn::Result<TokenStream> {
     if params.skip.get_from(target).unwrap_or_default() {
+        if *target_default {
+            return Ok(quote!());
+        }
         return Ok(quote! {
             #left_field: Default::default(),
         });
