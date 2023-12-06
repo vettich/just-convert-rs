@@ -72,6 +72,7 @@ struct Params {
 struct PathParams {
     path: Path,
     default: bool,
+    wrap_option: bool,
 }
 
 #[derive(Debug, Clone)]

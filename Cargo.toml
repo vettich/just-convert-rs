@@ -1,7 +1,7 @@
 [package]
 name = "just-convert"
 description = "Easy conversion of structures"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 authors = ["Vetti <vetti.ch@mail.ru>"]
 license = "MIT"

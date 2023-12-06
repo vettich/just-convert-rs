@@ -1,6 +1,6 @@
 use syn::{
-    meta::ParseNestedMeta, parenthesized, token, Data, DeriveInput, FieldsNamed, Path, PathSegment,
-    Result, Token,
+    meta::ParseNestedMeta, parenthesized, token, Data, DeriveInput, FieldsNamed, Ident, Path,
+    PathSegment, Result, Token,
 };
 
 use crate::{AdditionalType, FieldParams, FieldValue, Fields, Params, PathParams};
@@ -46,21 +46,37 @@ fn parse_attributes(input: &DeriveInput) -> Result<(Vec<PathParams>, Vec<PathPar
             let path: Path = content.parse()?;
 
             let mut default = false;
-            if content.peek(Token![,]) {
+            if content.peek(Token![,]) && content.peek2(Token![default]) {
                 content.parse::<Token![,]>()?;
                 content.parse::<Token![default]>()?;
                 default = true;
+            }
+
+            let mut wrap_option = false;
+            if content.peek(Token![,]) && content.peek2(Ident) {
+                content.parse::<Token![,]>()?;
+                let attr = content.parse::<Ident>()?.to_string();
+                if attr == "wrap_option" {
+                    wrap_option = true;
+                } else {
+                    return Err(meta.error("unknown value"));
+                }
             }
 
             if is_from {
                 from.push(PathParams {
                     path: path.clone(),
                     default,
+                    wrap_option,
                 });
             }
 
             if is_into {
-                into.push(PathParams { path, default });
+                into.push(PathParams {
+                    path,
+                    default,
+                    wrap_option,
+                });
             }
 
             Ok(())

@@ -115,6 +115,7 @@ fn build_from_assign_item(
     PathParams {
         path: target,
         default: target_default,
+        wrap_option,
     }: &PathParams,
 ) -> syn::Result<TokenStream> {
     if params.skip.get_from(target).unwrap_or_default() {
@@ -144,7 +145,9 @@ fn build_from_assign_item(
         });
     }
 
-    if params.a_type.is_option() && params.wrap.get_from(target).unwrap_or_default() {
+    if params.a_type.is_option()
+        && (params.wrap.get_from(target).unwrap_or_default() || *wrap_option)
+    {
         return Ok(quote! {
             #left_field: Some(this.#right_field),
         });
